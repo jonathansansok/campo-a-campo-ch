@@ -3,7 +3,7 @@ services:
     image: mysql:8
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: campoacampo
+      MYSQL_DATABASE: productos
     ports:
       - "3306:3306"
     volumes:
