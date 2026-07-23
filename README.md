@@ -12,10 +12,11 @@ Con Docker Desktop instalado:
 docker compose up --build
 ```
 
-Eso levanta los tres servicios: mysql, la api (aplica las migraciones sola al arrancar) y el frontend.
+Eso levanta los cuatro servicios: mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend.
 
 - API: `http://localhost:3000` — Swagger en `http://localhost:3000/docs`
 - Frontend: `http://localhost:8080`
+- Management de RabbitMQ: `http://localhost:15672` (guest/guest)
 
 La cotización se puede cambiar sin tocar nada más: `PRECIO_USD=1250 docker compose up --build`.
 
@@ -82,6 +83,8 @@ La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede 
 
 **Errores uniformes.** Un filtro global convierte cualquier excepción en JSON con el mismo formato. Los errores no controlados devuelven un 500 genérico y el detalle queda solo en los logs.
 
+**Mensajería como integración no crítica.** Cada alta, modificación o baja publica un evento (`producto.creado`, `producto.actualizado`, `producto.eliminado`) en RabbitMQ, y un consumer en la misma app los escucha y los loguea — es el punto donde se colgaría un downstream real (auditoría, sincronización de catálogo). La decisión importante: la api **no depende del broker**. Si RabbitMQ está caído, el CRUD sigue funcionando y el evento se pierde con un warning en el log. Un CRUD no tiene por qué fallar porque la mensajería esté abajo; si el negocio exigiera entrega garantizada, iría por outbox pattern, que acá sería sobre-ingeniería.
+
 ### Sobre el frontend
 
 El frontend no era requisito del challenge; se incluye como demo minimalista de consumo de la API. Se eligió PHP nativo (sin framework) en un servicio separado: demuestra el consumo de la API REST desde otro runtime, alineado con los conocimientos de PHP valorados en la posición, manteniendo el backend 100% en el stack requerido (Node + NestJS).
@@ -99,7 +102,7 @@ Cubren el cálculo de `precio_usd` (incluido el redondeo), la paginación y los 
 
 ## Qué haría con más tiempo
 
-- Eventos de dominio con RabbitMQ (publicar `producto.creado`/`actualizado`/`eliminado` de forma degradable, sin acoplar el CRUD al broker)
+- Outbox pattern si los eventos necesitaran entrega garantizada (hoy, con el broker caído, se pierden con un warning)
 - Cache de la cotización con TTL si viniera de una API externa en vez de una variable de entorno
 - Índice en `nombre` si el listado creciera y hubiera búsqueda
 - Un e2e completo del CRUD contra una base efímera

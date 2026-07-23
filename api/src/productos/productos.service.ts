@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Producto } from '@prisma/client';
 import { obtenerEntorno } from '../configuracion/validacion-entorno';
+import { PublicadorEventos } from '../eventos/publicador-eventos';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 import { CrearProductoDto } from './dto/crear-producto.dto';
@@ -8,7 +9,10 @@ import { PaginacionDto } from './dto/paginacion.dto';
 
 @Injectable()
 export class ProductosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventos: PublicadorEventos,
+  ) {}
 
   async listar(paginacion: PaginacionDto) {
     const { page = 1, limit = 10 } = paginacion;
@@ -39,6 +43,10 @@ export class ProductosService {
 
   async crear(dto: CrearProductoDto) {
     const creado = await this.prisma.producto.create({ data: dto });
+    this.eventos.publicar('producto.creado', {
+      id: creado.id,
+      nombre: creado.nombre,
+    });
     return this.conPrecioUsd(creado);
   }
 
@@ -53,12 +61,20 @@ export class ProductosService {
       where: { id },
       data: dto,
     });
+    this.eventos.publicar('producto.actualizado', {
+      id: actualizado.id,
+      nombre: actualizado.nombre,
+    });
     return this.conPrecioUsd(actualizado);
   }
 
   async eliminar(id: number) {
-    await this.buscarPorId(id);
+    const producto = await this.buscarPorId(id);
     await this.prisma.producto.delete({ where: { id } });
+    this.eventos.publicar('producto.eliminado', {
+      id: producto.id,
+      nombre: producto.nombre,
+    });
   }
 
   private conPrecioUsd(producto: Producto) {

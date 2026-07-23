@@ -1,10 +1,13 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { PublicadorEventos } from '../eventos/publicador-eventos';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductosService } from './productos.service';
 
 describe('ProductosService', () => {
   let servicio: ProductosService;
+
+  const eventosFalsos = { publicar: jest.fn() };
 
   const prismaFalso = {
     producto: {
@@ -37,6 +40,7 @@ describe('ProductosService', () => {
       providers: [
         ProductosService,
         { provide: PrismaService, useValue: prismaFalso },
+        { provide: PublicadorEventos, useValue: eventosFalsos },
       ],
     }).compile();
 
@@ -114,6 +118,10 @@ describe('ProductosService', () => {
         data: { nombre: 'Alambre de campo', precio: 35000 },
       });
       expect(resultado.precio_usd).toBe(25);
+      expect(eventosFalsos.publicar).toHaveBeenCalledWith(
+        'producto.creado',
+        expect.objectContaining({ id: 1 }),
+      );
     });
   });
 
