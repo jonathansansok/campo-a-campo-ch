@@ -9,7 +9,9 @@ services:
     volumes:
       - datos_mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      # por tcp a proposito: por socket contesta el servidor temporal del init
+      # de mysql y el healthy llegaba antes de que la base aceptara conexiones
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,6 +29,7 @@ services:
 
   api:
     build: ./api
+    restart: on-failure
     environment:
       DATABASE_URL: mysql://root:root@db:3306/productos
       PRECIO_USD: ${PRECIO_USD:-1400}
