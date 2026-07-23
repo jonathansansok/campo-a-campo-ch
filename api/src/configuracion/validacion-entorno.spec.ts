@@ -40,6 +40,14 @@ describe('validarEntorno', () => {
     expect(() => validarEntorno()).toThrow(/mayor a 0/);
   });
 
+  it('la mensajeria es opcional: sin RABBITMQ_URL el entorno es valido', () => {
+    delete process.env.RABBITMQ_URL;
+
+    const entorno = validarEntorno();
+
+    expect(entorno.RABBITMQ_URL).toBeUndefined();
+  });
+
   it('falla si falta DATABASE_URL', () => {
     delete process.env.DATABASE_URL;
 
