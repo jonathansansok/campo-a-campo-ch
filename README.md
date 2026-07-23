@@ -6,13 +6,23 @@ Incluye además un frontend mínimo en PHP para operar el CRUD desde el navegado
 
 ## Cómo levantar el proyecto
 
-Por ahora el arranque es en dos partes (el compose completo con la api adentro está en camino):
+Con Docker Desktop instalado:
 
 ```bash
-# 1. base de datos
-docker compose up -d db
+docker compose up --build
+```
 
-# 2. api
+Eso levanta los tres servicios: mysql, la api (aplica las migraciones sola al arrancar) y el frontend.
+
+- API: `http://localhost:3000` — Swagger en `http://localhost:3000/docs`
+- Frontend: `http://localhost:8080`
+
+La cotización se puede cambiar sin tocar nada más: `PRECIO_USD=1250 docker compose up --build`.
+
+### Desarrollo local sin contenedores (opcional)
+
+```bash
+docker compose up -d db     # solo la base
 cd api
 cp .env.example .env
 npm install
@@ -20,9 +30,7 @@ npx prisma migrate dev
 npm run start:dev
 ```
 
-La api queda en `http://localhost:3000` y la documentación interactiva en `http://localhost:3000/docs`.
-
-Para el frontend hace falta PHP 8 con curl habilitado:
+Y el frontend con PHP 8 local:
 
 ```bash
 cd frontend/public
@@ -80,8 +88,18 @@ El frontend no era requisito del challenge; se incluye como demo minimalista de 
 
 Es server-side rendering puro: PHP consume la api con cURL y devuelve HTML. Sin dependencias, sin Composer, escapando toda salida con `htmlspecialchars`. El único JavaScript es el `confirm()` antes de borrar.
 
-## Pendiente
+## Tests
 
-- Compose completo (api + frontend containerizados, hoy solo la base corre en docker)
-- Tests unitarios del service
-- Eventos de dominio con RabbitMQ
+```bash
+cd api
+npm test
+```
+
+Cubren el cálculo de `precio_usd` (incluido el redondeo), la paginación y los casos de error del CRUD, con prisma mockeado. La validación de entorno tiene su propia suite. Además hay un pipeline de GitHub Actions que corre lint, tests, build y la construcción de ambas imágenes docker en cada push.
+
+## Qué haría con más tiempo
+
+- Eventos de dominio con RabbitMQ (publicar `producto.creado`/`actualizado`/`eliminado` de forma degradable, sin acoplar el CRUD al broker)
+- Cache de la cotización con TTL si viniera de una API externa en vez de una variable de entorno
+- Índice en `nombre` si el listado creciera y hubiera búsqueda
+- Un e2e completo del CRUD contra una base efímera
