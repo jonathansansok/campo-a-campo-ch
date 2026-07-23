@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Producto } from '@prisma/client';
+import { obtenerEntorno } from '../configuracion/validacion-entorno';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 import { CrearProductoDto } from './dto/crear-producto.dto';
@@ -61,7 +62,7 @@ export class ProductosService {
   }
 
   private conPrecioUsd(producto: Producto) {
-    const cotizacion = parseFloat(process.env.PRECIO_USD);
+    const cotizacion = obtenerEntorno().PRECIO_USD;
     // Decimal de prisma -> number, y el precio en dolares con 2 decimales
     const precio = Number(producto.precio);
     return {

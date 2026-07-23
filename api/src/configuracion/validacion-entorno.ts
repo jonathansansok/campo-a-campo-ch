@@ -10,6 +10,8 @@ const esquemaEntorno = z.object({
 
 export type Entorno = z.infer<typeof esquemaEntorno>;
 
+let entornoValidado: Entorno | undefined;
+
 // se corre antes de levantar Nest: si el entorno esta mal, la app no arranca
 export function validarEntorno(): Entorno {
   const resultado = esquemaEntorno.safeParse(process.env);
@@ -19,5 +21,11 @@ export function validarEntorno(): Entorno {
       .join(' | ');
     throw new Error(`Entorno invalido -> ${detalle}`);
   }
-  return resultado.data;
+  entornoValidado = resultado.data;
+  return entornoValidado;
+}
+
+// para leer el entorno ya validado desde cualquier lado sin volver a parsear
+export function obtenerEntorno(): Entorno {
+  return entornoValidado ?? validarEntorno();
 }
