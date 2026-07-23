@@ -14,13 +14,26 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: ./api
     environment:
       DATABASE_URL: mysql://root:root@db:3306/productos
       PRECIO_USD: ${PRECIO_USD:-1400}
+      RABBITMQ_URL: amqp://rabbitmq:5672
     ports:
       - "3000:3000"
+    # la api solo espera a la base: sin rabbit arranca igual y avisa por log
     depends_on:
       db:
         condition: service_healthy
