@@ -6,14 +6,15 @@ body {
     margin: 0;
     font-family: system-ui, -apple-system, sans-serif;
     color: #2b2b2b;
-    background: #f6f5f2;
+    background: #f2f6f9;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
+/* azul del logo de decampoacampo.com */
 .cabecera {
-    background: #2f5d3a;
+    background: #3179a7;
     color: #fff;
 }
 
@@ -57,7 +58,7 @@ body {
 }
 
 .boton {
-    background: #c47f2a;
+    background: #3179a7;
     color: #fff;
     border: none;
     border-radius: 4px;
@@ -69,7 +70,18 @@ body {
 }
 
 .boton:hover {
-    background: #a96b20;
+    background: #27638a;
+    text-decoration: none;
+}
+
+/* en la cabecera el fondo ya es azul: el boton se invierte */
+.cabecera .boton {
+    background: #fff;
+    color: #3179a7;
+}
+
+.cabecera .boton:hover {
+    background: #9edbf4;
     text-decoration: none;
 }
 
@@ -156,9 +168,9 @@ th {
 }
 
 .pagina-actual {
-    background: #2f5d3a;
+    background: #3179a7;
     color: #fff;
-    border-color: #2f5d3a;
+    border-color: #3179a7;
 }
 
 .formulario {
@@ -190,6 +202,12 @@ th {
 
 .opcional {
     font-weight: 400;
+    color: #777;
+}
+
+.ayuda {
+    font-weight: 400;
+    font-size: 0.85rem;
     color: #777;
 }
 
