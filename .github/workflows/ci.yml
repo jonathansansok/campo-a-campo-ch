@@ -32,3 +32,14 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  imagenes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Imagen de la api
+        run: docker build ./api
+
+      - name: Imagen del frontend
+        run: docker build ./frontend
