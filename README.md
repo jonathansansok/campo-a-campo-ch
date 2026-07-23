@@ -45,7 +45,7 @@ Todo sale de variables de entorno (ver `api/.env.example`):
 | Variable | Qué es |
 |----------|--------|
 | `DATABASE_URL` | conexión a mysql |
-| `PRECIO_USD` | cotización del dólar en pesos. Con `PRECIO_USD=1400`, un producto de $35.000 se muestra como USD 25 |
+| `PRECIO_USD` | cotización del dólar en pesos. Con `PRECIO_USD=1400`, un producto de $35.000 se muestra como USD 25. La comparten la api (cálculo) y el frontend (la muestra en el formulario) |
 | `PORT` | puerto de la api (3000 por defecto) |
 
 Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la aplicación no arranca: preferí cortar en el boot antes que servir precios rotos.
@@ -77,6 +77,8 @@ La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede 
 
 **Prisma como capa de datos.** Queries parametrizadas (SQL injection cubierto de fábrica), migraciones versionadas en el repo y el modelo de la tabla `productos` definido en código. El precio es `DECIMAL(10,2)` — nunca float para dinero.
 
+**La tabla respeta la letra del enunciado.** Columnas `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base (`ON UPDATE CURRENT_TIMESTAMP` incluido). En el código los campos siguen en camelCase (`creadoEn`, `actualizadoEn`) mapeados con `@map`: la base cumple el contrato pedido y el código mantiene su convención. La migración que renombra las columnas está escrita a mano porque la autogenerada dropeaba y recreaba (perdía datos) y prisma no emite el `ON UPDATE`.
+
 **Una sola conexión a la base.** `PrismaService` es un provider global de Nest: los providers son singleton por defecto, así que toda la app comparte el mismo pool.
 
 **Validación en dos capas.** Los DTOs con class-validator rechazan cualquier body inválido o con campos de más (whitelist estricta). El entorno se valida con zod al arrancar, fail-fast.
@@ -103,6 +105,6 @@ Cubren el cálculo de `precio_usd` (incluido el redondeo), la paginación y los 
 ## Qué haría con más tiempo
 
 - Outbox pattern si los eventos necesitaran entrega garantizada (hoy, con el broker caído, se pierden con un warning)
-- Cache de la cotización con TTL si viniera de una API externa en vez de una variable de entorno
+- Traer la cotización de una API pública (dolarapi.com o el BNA) con caché y TTL, dejando `PRECIO_USD` como fallback si el servicio no responde. El challenge pide la variable de entorno, así que quedó como única fuente
 - Índice en `nombre` si el listado creciera y hubiera búsqueda
 - Un e2e completo del CRUD contra una base efímera
