@@ -9,11 +9,11 @@ datasource db {
 
 model Producto {
   id            Int      @id @default(autoincrement())
-  nombre        String
-  descripcion   String?
+  nombre        String   @db.VarChar(255)
+  descripcion   String?  @db.Text
   precio        Decimal  @db.Decimal(10, 2)
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  creadoEn      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  actualizadoEn DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   @@map("productos")
 }
