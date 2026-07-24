@@ -11,5 +11,6 @@ if (!in_array($accion, $accionesValidas, true)) {
 }
 
 $api = new ClienteApi();
+$cotizacion = (float) (getenv('PRECIO_USD') ?: 1400);
 
 require __DIR__ . '/../src/acciones/' . $accion . '.php';
