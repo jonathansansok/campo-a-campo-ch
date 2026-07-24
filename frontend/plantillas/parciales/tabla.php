@@ -8,7 +8,7 @@
                 <th>#</th>
                 <th>Nombre</th>
                 <th>Descripción</th>
-                <th class="numero">Precio ($)</th>
+                <th class="numero">Precio (AR)</th>
                 <th class="numero">Precio (USD)</th>
                 <th></th>
             </tr>
