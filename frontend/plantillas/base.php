@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($titulo) ?> | deCampoaCampo</title>
+    <title><?= htmlspecialchars($titulo) ?> | deCampoaCampo.com</title>
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
 <header class="cabecera">
     <div class="cabecera-interna">
-        <span class="marca">deCampoaCampo</span>
+        <span class="marca">deCampoaCampo.com</span>
         <nav>
             <a href="index.php">Productos</a>
             <a href="index.php?accion=crear" class="boton">Nuevo producto</a>
