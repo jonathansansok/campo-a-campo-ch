@@ -9,10 +9,10 @@ import {
 } from 'class-validator';
 
 export class CrearProductoDto {
-  @ApiProperty({ example: 'Alambre de campo', maxLength: 100 })
+  @ApiProperty({ example: 'Alambre de campo', maxLength: 255 })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
+  @MaxLength(255)
   nombre: string;
 
   @ApiPropertyOptional({ example: 'Rollo de 500 metros', maxLength: 500 })
