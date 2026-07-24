@@ -8,6 +8,11 @@ describe('Salud (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
+    process.env.DATABASE_URL =
+      process.env.DATABASE_URL ??
+      'mysql://root:root@localhost:3306/productos_test';
+    process.env.PRECIO_USD = process.env.PRECIO_USD ?? '1400';
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
