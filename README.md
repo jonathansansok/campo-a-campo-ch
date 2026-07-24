@@ -4,6 +4,18 @@ API REST para gestionar productos, hecha con NestJS + Prisma + MySQL. Cada produ
 
 Incluye además un frontend mínimo en PHP para operar el CRUD desde el navegador.
 
+**Demo desplegada en Azure:** el frontend está en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y la API en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Ojo: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
+
+## Arranque rápido
+
+```bash
+git clone https://github.com/jonathansansok/campo-a-campo-ch.git
+cd campo-a-campo-ch
+docker compose up --build
+```
+
+No hace falta configurar nada: el compose ya trae las variables con valores para desarrollo. Si querés otra cotización del dólar, `PRECIO_USD=1250 docker compose up --build` y listo.
+
 ## Cómo levantar el proyecto
 
 Con Docker Desktop instalado:
@@ -40,26 +52,13 @@ API_URL=http://localhost:3000 php -S localhost:8080
 
 ## Configuración
 
-Todo sale de variables de entorno (ver `api/.env.example`):
-
-| Variable | Qué es |
-|----------|--------|
-| `DATABASE_URL` | conexión a mysql |
-| `PRECIO_USD` | cotización del dólar en pesos. Con `PRECIO_USD=1400`, un producto de $35.000 se muestra como USD 25. La comparten la api (cálculo) y el frontend (la muestra en el formulario) |
-| `PORT` | puerto de la api (3000 por defecto) |
+Todo sale de variables de entorno (ver `api/.env.example`). `DATABASE_URL` es la conexión a mysql y `PORT` el puerto de la api (3000 por defecto). La más interesante es `PRECIO_USD`, la cotización del dólar en pesos: con `PRECIO_USD=1400`, un producto de $35.000 se muestra como USD 25. La comparten la api, que hace el cálculo, y el frontend, que la muestra en el formulario de alta.
 
 Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la aplicación no arranca: preferí cortar en el boot antes que servir precios rotos.
 
 ## Endpoints
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/productos?page=1&limit=10` | listado paginado |
-| GET | `/productos/:id` | detalle |
-| POST | `/productos` | alta |
-| PUT | `/productos/:id` | modificación |
-| DELETE | `/productos/:id` | baja |
-| GET | `/salud` | estado de la app y la base |
+El CRUD clásico sobre `/productos`: `GET /productos?page=1&limit=10` devuelve el listado paginado, `GET /productos/:id` el detalle, `POST /productos` da de alta, `PUT /productos/:id` modifica y `DELETE /productos/:id` borra. Aparte hay un `GET /salud` que responde el estado de la app y de la base.
 
 Ejemplo rápido:
 
