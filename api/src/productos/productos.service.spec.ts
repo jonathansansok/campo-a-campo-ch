@@ -25,8 +25,8 @@ describe('ProductosService', () => {
     nombre: 'Alambre de campo',
     descripcion: null,
     precio: 35000,
-    creadoEn: new Date('2026-07-20'),
-    actualizadoEn: new Date('2026-07-20'),
+    created_at: new Date('2026-07-20'),
+    updated_at: new Date('2026-07-20'),
   };
 
   beforeAll(() => {
