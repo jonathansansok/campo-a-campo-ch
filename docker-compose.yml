@@ -45,6 +45,8 @@ services:
     build: ./frontend
     environment:
       API_URL: http://api:3000
+      # misma cotizacion que la api, para mostrarla en el formulario
+      PRECIO_USD: ${PRECIO_USD:-1400}
     ports:
       - "8080:80"
     depends_on:
