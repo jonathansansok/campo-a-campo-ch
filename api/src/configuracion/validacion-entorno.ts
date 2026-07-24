@@ -6,7 +6,8 @@ const esquemaEntorno = z.object({
     .number()
     .positive('PRECIO_USD debe ser un numero mayor a 0'),
   PORT: z.coerce.number().int().positive().default(3000),
-  RABBITMQ_URL: z.string().default('amqp://localhost:5672'),
+  // opcional: sin RABBITMQ_URL la mensajeria queda deshabilitada
+  RABBITMQ_URL: z.string().optional(),
 });
 
 export type Entorno = z.infer<typeof esquemaEntorno>;

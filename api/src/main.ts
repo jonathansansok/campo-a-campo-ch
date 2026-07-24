@@ -29,9 +29,10 @@ async function bootstrap() {
   const documento = SwaggerModule.createDocument(app, configDocs);
   SwaggerModule.setup('docs', app, documento);
 
-  // el consumer de eventos escucha en la misma app. Si rabbit esta caido la
-  // api levanta igual: la mensajeria es una integracion no critica
-  try {
+  // el consumer de eventos escucha en la misma app solo si hay broker
+  // configurado. El arranque no se espera: con rabbit caido el server RMQ
+  // reintenta para siempre y bloquearia el listen. Mensajeria no critica.
+  if (entorno.RABBITMQ_URL) {
     app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.RMQ,
       options: {
@@ -40,11 +41,11 @@ async function bootstrap() {
         queueOptions: { durable: true },
       },
     });
-    await app.startAllMicroservices();
-  } catch (motivo) {
-    new Logger('Bootstrap').warn(
-      `Sin conexion con rabbit, la api arranca sin eventos: ${(motivo as Error).message}`,
-    );
+    app.startAllMicroservices().catch((motivo: Error) => {
+      new Logger('Bootstrap').warn(
+        `Sin conexion con rabbit, la api sigue sin eventos: ${motivo.message}`,
+      );
+    });
   }
 
   await app.listen(entorno.PORT);
