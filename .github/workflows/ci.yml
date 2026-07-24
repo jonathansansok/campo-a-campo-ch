@@ -12,6 +12,19 @@ jobs:
     defaults:
       run:
         working-directory: api
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: productos_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +42,17 @@ jobs:
 
       - name: Tests
         run: npm test
+
+      - name: Migraciones en la base de prueba
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/productos_test
+
+      - name: Tests e2e
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/productos_test
+          PRECIO_USD: 1400
 
       - name: Build
         run: npm run build
