@@ -6,7 +6,9 @@ Incluye además un frontend mínimo en PHP para operar el CRUD desde el navegado
 
 **Demo desplegada en Azure:** el frontend está en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y la API en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Ojo: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
 
-## Arranque rápido
+## Cómo levantar el proyecto
+
+Con Docker Desktop instalado:
 
 ```bash
 git clone https://github.com/jonathansansok/campo-a-campo-ch.git
@@ -14,17 +16,7 @@ cd campo-a-campo-ch
 docker compose up --build
 ```
 
-No hace falta configurar nada: el compose ya trae las variables con valores para desarrollo. Si querés otra cotización del dólar, `PRECIO_USD=1250 docker compose up --build` y listo.
-
-## Cómo levantar el proyecto
-
-Con Docker Desktop instalado:
-
-```bash
-docker compose up --build
-```
-
-Eso levanta los cuatro servicios: mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend.
+Eso levanta los cuatro servicios: mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend. No hace falta configurar nada: el compose ya trae las variables con valores para desarrollo.
 
 - API: `http://localhost:3000` (Swagger en `http://localhost:3000/docs`)
 - Frontend: `http://localhost:8080`
@@ -76,7 +68,7 @@ La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede 
 
 **Prisma como capa de datos.** Queries parametrizadas (SQL injection cubierto de fábrica), migraciones versionadas en el repo y el modelo de la tabla `productos` definido en código. El precio es `DECIMAL(10,2)`: nunca float para dinero.
 
-**La tabla respeta la letra del enunciado.** Columnas `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base (`ON UPDATE CURRENT_TIMESTAMP` incluido). En el código los campos siguen en camelCase (`creadoEn`, `actualizadoEn`) mapeados con `@map`: la base cumple el contrato pedido y el código mantiene su convención. La migración que renombra las columnas está escrita a mano porque la autogenerada dropeaba y recreaba (perdía datos) y prisma no emite el `ON UPDATE`.
+**La tabla respeta la letra del enunciado.** Columnas `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base (`ON UPDATE CURRENT_TIMESTAMP` incluido). Los campos del modelo usan los mismos nombres, así la respuesta JSON también expone `created_at`/`updated_at` como pide la tabla. La migración que renombra las columnas está escrita a mano porque la autogenerada dropeaba y recreaba (perdía datos) y prisma no emite el `ON UPDATE`.
 
 **Una sola conexión a la base.** `PrismaService` es un provider global de Nest: los providers son singleton por defecto, así que toda la app comparte el mismo pool.
 

@@ -29,6 +29,7 @@ export class ProductosController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de un producto' })
+  @ApiResponse({ status: 200, description: 'Producto encontrado' })
   @ApiResponse({ status: 404, description: 'No existe el producto' })
   buscarPorId(@Param('id', ParseIntPipe) id: number) {
     return this.productosService.buscarPorId(id);
@@ -36,6 +37,7 @@ export class ProductosController {
 
   @Post()
   @ApiOperation({ summary: 'Crea un producto' })
+  @ApiResponse({ status: 201, description: 'Producto creado' })
   @ApiResponse({ status: 400, description: 'Datos invalidos' })
   crear(@Body() dto: CrearProductoDto) {
     return this.productosService.crear(dto);
@@ -43,6 +45,7 @@ export class ProductosController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Actualiza un producto' })
+  @ApiResponse({ status: 200, description: 'Producto actualizado' })
   @ApiResponse({ status: 404, description: 'No existe el producto' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -54,6 +57,7 @@ export class ProductosController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Elimina un producto' })
+  @ApiResponse({ status: 204, description: 'Producto eliminado' })
   @ApiResponse({ status: 404, description: 'No existe el producto' })
   eliminar(@Param('id', ParseIntPipe) id: number) {
     return this.productosService.eliminar(id);
