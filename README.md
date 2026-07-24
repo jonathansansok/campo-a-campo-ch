@@ -1,12 +1,10 @@
 # Challenge deCampoaCampo - API de productos
 
-API REST para gestionar productos, hecha con NestJS + Prisma + MySQL. Cada producto expone su precio en pesos y el equivalente en dólares calculado a partir de una cotización configurable.
+API REST de productos con NestJS + Prisma + MySQL. Cada producto devuelve su precio en pesos y el equivalente en dólares según la cotización configurada en `PRECIO_USD`. Incluye un frontend chico en PHP para usar el CRUD desde el navegador.
 
-Incluye además un frontend mínimo en PHP para operar el CRUD desde el navegador.
+**Demo en Azure:** frontend en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y api en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Ojo: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
 
-**Demo desplegada en Azure:** el frontend está en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y la API en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Ojo: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
-
-## Cómo levantar el proyecto
+## Cómo levantarlo
 
 Con Docker Desktop instalado:
 
@@ -16,15 +14,15 @@ cd campo-a-campo-ch
 docker compose up --build
 ```
 
-Eso levanta los cuatro servicios: mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend. No hace falta configurar nada: el compose ya trae las variables con valores para desarrollo.
+Levanta mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend. No hay que configurar nada, el compose ya trae valores de desarrollo.
 
-- API: `http://localhost:3000` (Swagger en `http://localhost:3000/docs`)
+- API: `http://localhost:3000` (Swagger en `/docs`)
 - Frontend: `http://localhost:8080`
 - Management de RabbitMQ: `http://localhost:15672` (guest/guest)
 
-La cotización se puede cambiar sin tocar nada más: `PRECIO_USD=1250 docker compose up --build`.
+Para cambiar la cotización: `PRECIO_USD=1250 docker compose up --build`.
 
-### Desarrollo local sin contenedores (opcional)
+### Sin contenedores (opcional)
 
 ```bash
 docker compose up -d db     # solo la base
@@ -44,15 +42,17 @@ API_URL=http://localhost:3000 php -S localhost:8080
 
 ## Configuración
 
-Todo sale de variables de entorno (ver `api/.env.example`). `DATABASE_URL` es la conexión a mysql y `PORT` el puerto de la api (3000 por defecto). La más interesante es `PRECIO_USD`, la cotización del dólar en pesos: con `PRECIO_USD=1400`, un producto de $35.000 se muestra como USD 25. La comparten la api, que hace el cálculo, y el frontend, que la muestra en el formulario de alta.
+Todo sale de variables de entorno (ver `api/.env.example`):
 
-Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la aplicación no arranca: preferí cortar en el boot antes que servir precios rotos.
+- `DATABASE_URL`: conexión a mysql
+- `PRECIO_USD`: cotización del dólar en pesos. Con 1400, un producto de $35.000 se muestra como USD 25
+- `PORT`: puerto de la api (3000 por defecto)
+
+Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la app no arranca: preferí cortar en el boot antes que servir precios rotos.
 
 ## Endpoints
 
-El CRUD clásico sobre `/productos`: `GET /productos?page=1&limit=10` devuelve el listado paginado, `GET /productos/:id` el detalle, `POST /productos` da de alta, `PUT /productos/:id` modifica y `DELETE /productos/:id` borra. Aparte hay un `GET /salud` que responde el estado de la app y de la base.
-
-Ejemplo rápido:
+El CRUD sobre `/productos`: `GET /productos?page=1&limit=10` lista paginado, `GET /productos/:id` detalle, `POST /productos` alta, `PUT /productos/:id` modificación y `DELETE /productos/:id` baja. Aparte hay un `GET /salud` con el estado de la app y de la base.
 
 ```bash
 curl -X POST http://localhost:3000/productos \
@@ -60,42 +60,45 @@ curl -X POST http://localhost:3000/productos \
   -d '{"nombre": "Alambre de campo", "precio": 35000}'
 ```
 
-La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede probar desde Swagger en `/docs`.
+La respuesta incluye `precio_usd` calculado. El resto se puede probar desde Swagger en `/docs`.
 
-## Decisiones de diseño
+## Decisiones
 
-**El precio en dólares no se persiste.** Se calcula al momento de responder (`precio / PRECIO_USD`). Guardarlo sería duplicar un dato derivado que queda obsoleto con cada cambio de cotización. Aclaración sobre la semántica, porque el enunciado da lugar a dudas: interpreté `PRECIO_USD` como la cotización del dólar en pesos, por eso se divide.
+- El precio en dólares no se guarda, se calcula al responder (`precio / PRECIO_USD`). Es un dato derivado: guardarlo lo dejaría obsoleto con cada cambio de cotización. Interpreté `PRECIO_USD` como la cotización del dólar en pesos, por eso se divide.
+- Prisma como capa de datos: queries parametrizadas (inyección SQL cubierta), migraciones versionadas en el repo. `precio` es `DECIMAL(10,2)`, nunca float para plata.
+- La tabla respeta la letra del enunciado: `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at`/`updated_at` como `TIMESTAMP` con sus defaults en la base, `ON UPDATE CURRENT_TIMESTAMP` incluido. Esa migración está escrita a mano porque la autogenerada dropeaba y recreaba columnas.
+- Una sola conexión a la base: `PrismaService` es un provider global de Nest (singleton), toda la app comparte el mismo pool. La estructura general es MVC: controller, service, capa de datos.
+- Validación en dos capas: los DTOs con class-validator rechazan bodies inválidos o con campos de más, y el entorno se valida con zod al arrancar.
+- Errores siempre en JSON con el mismo formato, vía un filtro global. Los no controlados devuelven un 500 genérico y el detalle queda solo en los logs.
+- RabbitMQ como integración no crítica: cada alta, modificación o baja publica un evento (`producto.creado`, etc.) y un consumer en la misma app lo loguea. La api no depende del broker: si rabbit está caído el CRUD sigue funcionando y el evento se pierde con un warning. Para entrega garantizada iría un outbox pattern, que acá sería sobre-ingeniería.
 
-**Prisma como capa de datos.** Queries parametrizadas (SQL injection cubierto de fábrica), migraciones versionadas en el repo y el modelo de la tabla `productos` definido en código. El precio es `DECIMAL(10,2)`: nunca float para dinero.
-
-**La tabla respeta la letra del enunciado.** Columnas `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base (`ON UPDATE CURRENT_TIMESTAMP` incluido). Los campos del modelo usan los mismos nombres, así la respuesta JSON también expone `created_at`/`updated_at` como pide la tabla. La migración que renombra las columnas está escrita a mano porque la autogenerada dropeaba y recreaba (perdía datos) y prisma no emite el `ON UPDATE`.
-
-**Una sola conexión a la base.** `PrismaService` es un provider global de Nest: los providers son singleton por defecto, así que toda la app comparte el mismo pool.
-
-**Validación en dos capas.** Los DTOs con class-validator rechazan cualquier body inválido o con campos de más (whitelist estricta). El entorno se valida con zod al arrancar, fail-fast.
-
-**Errores uniformes.** Un filtro global convierte cualquier excepción en JSON con el mismo formato. Los errores no controlados devuelven un 500 genérico y el detalle queda solo en los logs.
-
-**Mensajería como integración no crítica.** Cada alta, modificación o baja publica un evento (`producto.creado`, `producto.actualizado`, `producto.eliminado`) en RabbitMQ, y un consumer en la misma app los escucha y los loguea. Ahí es donde se colgaría un downstream real (auditoría, sincronización de catálogo). La decisión importante: la api **no depende del broker**. Si RabbitMQ está caído, el CRUD sigue funcionando y el evento se pierde con un warning en el log. Un CRUD no tiene por qué fallar porque la mensajería esté abajo; si el negocio exigiera entrega garantizada, iría por outbox pattern, que acá sería sobre-ingeniería.
-
-### Sobre el frontend
-
-El frontend no era requisito del challenge; se incluye como demo minimalista de consumo de la API. Se eligió PHP nativo (sin framework) en un servicio separado: demuestra el consumo de la API REST desde otro runtime, alineado con los conocimientos de PHP valorados en la posición, manteniendo el backend 100% en el stack requerido (Node + NestJS).
-
-Es server-side rendering puro: PHP consume la api con cURL y devuelve HTML. Sin dependencias, sin Composer, escapando toda salida con `htmlspecialchars`. El único JavaScript es el `confirm()` antes de borrar.
+El frontend no era parte del challenge, lo sumé como demo de consumo de la api desde otro runtime. PHP nativo sin framework, server-side puro con cURL, toda salida escapada con `htmlspecialchars`.
 
 ## Tests
+
+Unitarios (con prisma mockeado): cálculo de `precio_usd`, paginación, casos de error del CRUD y validación de entorno.
 
 ```bash
 cd api
 npm test
 ```
 
-Cubren el cálculo de `precio_usd` (incluido el redondeo), la paginación y los casos de error del CRUD, con prisma mockeado. La validación de entorno tiene su propia suite. Además hay un pipeline de GitHub Actions que corre lint, tests, build y la construcción de ambas imágenes docker en cada push.
+E2e: el CRUD completo por HTTP contra una base mysql de prueba (`productos_test`), separada de la de desarrollo.
+
+```bash
+docker compose up -d db
+cd api
+export DATABASE_URL="mysql://root:root@localhost:3306/productos_test"
+npx prisma migrate deploy
+npm run test:e2e
+```
+
+(en PowerShell: `$env:DATABASE_URL="mysql://root:root@localhost:3306/productos_test"`)
+
+El pipeline de GitHub Actions corre lint, unitarios, build, el e2e contra un mysql propio del job y la construcción de ambas imágenes docker en cada push.
 
 ## Qué haría con más tiempo
 
-- Outbox pattern si los eventos necesitaran entrega garantizada (hoy, con el broker caído, se pierden con un warning)
-- Traer la cotización de una API pública (dolarapi.com o el BNA) con caché y TTL, dejando `PRECIO_USD` como fallback si el servicio no responde. El challenge pide la variable de entorno, así que quedó como única fuente
+- Outbox pattern si los eventos necesitaran entrega garantizada
+- Traer la cotización de una API pública (dolarapi.com o el BNA) con caché, dejando `PRECIO_USD` de fallback. El challenge pide la variable de entorno, así que quedó como única fuente
 - Índice en `nombre` si el listado creciera y hubiera búsqueda
-- Un e2e completo del CRUD contra una base efímera
