@@ -20,19 +20,48 @@ Para cambiar la cotización: `PRECIO_USD=1250 docker compose up --build` (en Pow
 
 Si se prefiere correr la api sin contenedores: levantar solo la base con `docker compose up -d db`, y dentro de `api/` copiar `.env.example` a `.env`, `npm install`, `npx prisma migrate dev` y `npm run start:dev`. El frontend con PHP 8 local se sirve desde `frontend/public` con `API_URL=http://localhost:3000 php -S localhost:8080` (en PowerShell: `$env:API_URL="http://localhost:3000"; php -S localhost:8080`).
 
+## Requisitos del challenge
+
+Lo pedido por el enunciado y cómo quedó cubierto:
+
+- API en Node.js con NestJS
+- Base MySQL con la tabla productos según la estructura pedida (id autoincremental, nombre, descripción, precio decimal, created_at y updated_at con sus defaults)
+- Variable de entorno PRECIO_USD: el precio en dólares se calcula en cada respuesta, nunca se guarda en la base
+- CRUD completo sobre /productos (listado, detalle, alta, modificación y baja) con respuestas en JSON
+- Manejo de errores y excepciones con formato uniforme
+- Validaciones básicas y protección contra inyección SQL mediante queries parametrizadas
+- Separación de responsabilidades con MVC y singleton para la conexión a la base
+- Contenedor para la api, contenedor para MySQL y docker-compose.yml que orquesta todo
+- Este README con instalación, configuración y cómo probar la API
+
+## Extras y deseables de la vacante
+
+Cosas que sumé por ser bonus del challenge o deseables de la posición:
+
+- Prisma como ORM, con migraciones versionadas en el repo
+- Validaciones con DTOs y documentación Swagger en /docs
+- Tests unitarios y e2e con Jest
+- Paginación en el listado de productos
+- Archivo .env de ejemplo y healthcheck en /salud
+- ESLint y Prettier
+- RabbitMQ: eventos de alta, modificación y baja (deseable de mensajería)
+- Frontend en PHP nativo consumiendo la api (deseable de PHP)
+- CI con GitHub Actions: lint, tests, build e imágenes docker en cada push (deseable de CI/CD)
+- Despliegue en la nube con Azure Container Apps (deseable de cloud)
+
 ## Configuración
 
 Todo sale de variables de entorno (ver `api/.env.example`): `DATABASE_URL` es la conexión a mysql, `PRECIO_USD` la cotización del dólar en pesos, `PORT` el puerto de la api (3000 por defecto) y `RABBITMQ_URL` la conexión al broker, que es opcional: sin ella la mensajería queda deshabilitada. Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la app no arranca: preferí cortar en el boot antes que servir precios rotos.
 
 ## Decisiones
 
-La primera decisión fue qué hacer con el precio en dólares. No se guarda en la base: es un dato derivado, y persistirlo lo dejaría obsoleto con cada cambio de cotización, así que se calcula al momento de responder como `precio / PRECIO_USD`. Interpreté `PRECIO_USD` como la cotización del dólar expresada en pesos, por eso la operación es una división. El campo `precio` es `DECIMAL(10,2)` porque plata en float es buscarse errores de redondeo. La tabla respeta la letra del enunciado (`nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base, incluido el `ON UPDATE CURRENT_TIMESTAMP`); esa migración la escribí a mano porque la autogenerada dropeaba y recreaba columnas.
+La primera decisión fue qué hacer con el precio en dólares. No se guarda en la base porque es un dato derivado: persistirlo lo dejaría obsoleto con cada cambio de cotización, así que se calcula al responder dividiendo el precio en pesos por la cotización. Para la plata usé decimal y no float, que trae errores de redondeo. La tabla respeta la letra del enunciado, con los timestamps y sus defaults resueltos en la base; esa migración la escribí a mano porque la autogenerada dropeaba y recreaba columnas.
 
-En cuanto a la organización, la estructura es MVC clásico: controller, service y capa de datos, cada uno con su responsabilidad. Elegí Prisma como capa de datos porque me da queries parametrizadas (con eso la inyección SQL queda cubierta) y migraciones versionadas dentro del repo. La conexión a la base es una sola: `PrismaService` es un provider global de Nest, un singleton, y toda la aplicación comparte el mismo pool.
+En la organización seguí MVC clásico: controller, service y capa de datos, cada uno con su responsabilidad. Prisma me da queries parametrizadas, con lo que la inyección SQL queda cubierta, y migraciones versionadas. La conexión a la base es una sola: el servicio de Prisma es un singleton global y toda la aplicación comparte el mismo pool.
 
-Para los casos que salen del camino feliz razoné en dos capas. Los DTOs con class-validator rechazan bodies inválidos o con campos de más, y el entorno se valida con zod al arrancar: si algo esencial falta o está mal, la app corta en el boot en vez de fallar después en producción. Los errores salen siempre en JSON con el mismo formato gracias a un filtro global; los no controlados devuelven un 500 genérico y el detalle queda solo en los logs, nunca expuesto al cliente.
+Para los casos que salen del camino feliz razoné en dos capas: los DTOs rechazan bodies inválidos o con campos de más, y el entorno se valida al arrancar; si algo esencial falta o está mal, la app corta en el boot en vez de fallar después en producción. Los errores salen siempre en JSON con el mismo formato gracias a un filtro global, y los no controlados devuelven un 500 genérico con el detalle solo en los logs.
 
-Sobre el alcance, sumé algunas cosas por fuera del enunciado cuidando que no compliquen la entrega. RabbitMQ quedó como integración no crítica: cada alta, modificación o baja publica un evento y un consumer en la misma app lo loguea, pero la api no depende del broker; si rabbit está caído el CRUD sigue funcionando y el evento se pierde con un warning. Para entrega garantizada iría un outbox pattern, que acá sería sobre-ingeniería. El frontend no era requisito del challenge; se incluye como demo minimalista de consumo de la API. Se eligió PHP nativo (sin framework) en un servicio separado: demuestra el consumo de la API REST desde otro runtime, alineado con los conocimientos de PHP valorados en la posición, manteniendo el backend 100% en el stack requerido (Node + NestJS). Todo el conjunto quedó cubierto con tests y un pipeline de CI que se describen más abajo.
+Sobre el alcance, sumé cosas por fuera del enunciado cuidando que no compliquen la entrega. RabbitMQ quedó como integración no crítica: cada operación del CRUD publica un evento y un consumer lo loguea, pero la api no depende del broker; si está caído, el CRUD sigue funcionando y el evento se pierde con un warning. Para entrega garantizada iría un outbox pattern, que acá sería sobre-ingeniería. El frontend no era requisito del challenge; se incluye como demo minimalista de consumo de la API. Se eligió PHP nativo (sin framework) en un servicio separado: demuestra el consumo de la API REST desde otro runtime, alineado con los conocimientos de PHP valorados en la posición, manteniendo el backend 100% en el stack requerido (Node + NestJS).
 
 ## Endpoints
 
@@ -51,7 +80,3 @@ La respuesta incluye `precio_usd` calculado. El resto se puede probar desde Swag
 Los unitarios (con prisma mockeado) cubren el cálculo de `precio_usd`, la paginación, los casos de error del CRUD y la validación de entorno; se corren con `npm test` dentro de `api/`. El e2e ejercita el CRUD completo por HTTP contra una base mysql de prueba (`productos_test`), separada de la de desarrollo: con la base levantada (`docker compose up -d db`), en `api/` hay que apuntar `DATABASE_URL` a `mysql://root:root@localhost:3306/productos_test`, aplicar las migraciones con `npx prisma migrate deploy` y correr `npm run test:e2e`.
 
 El pipeline de GitHub Actions corre lint, unitarios, build, el e2e contra un mysql propio del job y la construcción de ambas imágenes docker en cada push.
-
-## Qué haría con más tiempo
-
-Un outbox pattern si los eventos necesitaran entrega garantizada, traer la cotización de una API pública (dolarapi.com o el BNA) con caché dejando `PRECIO_USD` de fallback (el challenge pide la variable de entorno, así que quedó como única fuente), y un índice en `nombre` si el listado creciera y hubiera búsqueda.
