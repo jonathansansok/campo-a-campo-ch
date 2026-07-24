@@ -1,4 +1,4 @@
-# Challenge deCampoaCampo — API de productos
+# Challenge deCampoaCampo - API de productos
 
 API REST para gestionar productos, hecha con NestJS + Prisma + MySQL. Cada producto expone su precio en pesos y el equivalente en dólares calculado a partir de una cotización configurable.
 
@@ -26,7 +26,7 @@ docker compose up --build
 
 Eso levanta los cuatro servicios: mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el frontend.
 
-- API: `http://localhost:3000` — Swagger en `http://localhost:3000/docs`
+- API: `http://localhost:3000` (Swagger en `http://localhost:3000/docs`)
 - Frontend: `http://localhost:8080`
 - Management de RabbitMQ: `http://localhost:15672` (guest/guest)
 
@@ -74,7 +74,7 @@ La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede 
 
 **El precio en dólares no se persiste.** Se calcula al momento de responder (`precio / PRECIO_USD`). Guardarlo sería duplicar un dato derivado que queda obsoleto con cada cambio de cotización. Aclaración sobre la semántica, porque el enunciado da lugar a dudas: interpreté `PRECIO_USD` como la cotización del dólar en pesos, por eso se divide.
 
-**Prisma como capa de datos.** Queries parametrizadas (SQL injection cubierto de fábrica), migraciones versionadas en el repo y el modelo de la tabla `productos` definido en código. El precio es `DECIMAL(10,2)` — nunca float para dinero.
+**Prisma como capa de datos.** Queries parametrizadas (SQL injection cubierto de fábrica), migraciones versionadas en el repo y el modelo de la tabla `productos` definido en código. El precio es `DECIMAL(10,2)`: nunca float para dinero.
 
 **La tabla respeta la letra del enunciado.** Columnas `nombre VARCHAR(255)`, `descripcion TEXT`, `created_at` y `updated_at` como `TIMESTAMP` con sus defaults en la base (`ON UPDATE CURRENT_TIMESTAMP` incluido). En el código los campos siguen en camelCase (`creadoEn`, `actualizadoEn`) mapeados con `@map`: la base cumple el contrato pedido y el código mantiene su convención. La migración que renombra las columnas está escrita a mano porque la autogenerada dropeaba y recreaba (perdía datos) y prisma no emite el `ON UPDATE`.
 
@@ -84,7 +84,7 @@ La respuesta incluye `precio_usd` calculado. El resto de los endpoints se puede 
 
 **Errores uniformes.** Un filtro global convierte cualquier excepción en JSON con el mismo formato. Los errores no controlados devuelven un 500 genérico y el detalle queda solo en los logs.
 
-**Mensajería como integración no crítica.** Cada alta, modificación o baja publica un evento (`producto.creado`, `producto.actualizado`, `producto.eliminado`) en RabbitMQ, y un consumer en la misma app los escucha y los loguea — es el punto donde se colgaría un downstream real (auditoría, sincronización de catálogo). La decisión importante: la api **no depende del broker**. Si RabbitMQ está caído, el CRUD sigue funcionando y el evento se pierde con un warning en el log. Un CRUD no tiene por qué fallar porque la mensajería esté abajo; si el negocio exigiera entrega garantizada, iría por outbox pattern, que acá sería sobre-ingeniería.
+**Mensajería como integración no crítica.** Cada alta, modificación o baja publica un evento (`producto.creado`, `producto.actualizado`, `producto.eliminado`) en RabbitMQ, y un consumer en la misma app los escucha y los loguea. Ahí es donde se colgaría un downstream real (auditoría, sincronización de catálogo). La decisión importante: la api **no depende del broker**. Si RabbitMQ está caído, el CRUD sigue funcionando y el evento se pierde con un warning en el log. Un CRUD no tiene por qué fallar porque la mensajería esté abajo; si el negocio exigiera entrega garantizada, iría por outbox pattern, que acá sería sobre-ingeniería.
 
 ### Sobre el frontend
 
