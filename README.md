@@ -2,11 +2,11 @@
 
 API REST de productos con NestJS + Prisma + MySQL. Cada producto devuelve su precio en pesos y el equivalente en dólares según la cotización configurada en `PRECIO_USD`. Incluye un frontend chico en PHP para usar el CRUD desde el navegador.
 
-**Demo en Azure:** frontend en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y api en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Ojo: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
+**Demo en Azure:** frontend en https://frontend.calmsmoke-688eecf8.westus2.azurecontainerapps.io y api en https://api.calmsmoke-688eecf8.westus2.azurecontainerapps.io (Swagger en `/docs`). Nota: escala a cero cuando está inactiva, el primer request puede tardar unos 30 segundos.
 
 ## Cómo levantarlo
 
-Con Docker Desktop instalado:
+Con Docker Desktop instalado (los comandos andan igual en PowerShell, CMD o Git Bash):
 
 ```bash
 git clone https://github.com/jonathansansok/campo-a-campo-ch.git
@@ -20,7 +20,7 @@ Levanta mysql, rabbitmq, la api (aplica las migraciones sola al arrancar) y el f
 - Frontend: `http://localhost:8080`
 - Management de RabbitMQ: `http://localhost:15672` (guest/guest)
 
-Para cambiar la cotización: `PRECIO_USD=1250 docker compose up --build`.
+Para cambiar la cotización: `PRECIO_USD=1250 docker compose up --build` (en PowerShell: `$env:PRECIO_USD="1250"; docker compose up --build`).
 
 ### Sin contenedores (opcional)
 
@@ -40,6 +40,8 @@ cd frontend/public
 API_URL=http://localhost:3000 php -S localhost:8080
 ```
 
+(en PowerShell: `$env:API_URL="http://localhost:3000"; php -S localhost:8080`)
+
 ## Configuración
 
 Todo sale de variables de entorno (ver `api/.env.example`):
@@ -47,6 +49,7 @@ Todo sale de variables de entorno (ver `api/.env.example`):
 - `DATABASE_URL`: conexión a mysql
 - `PRECIO_USD`: cotización del dólar en pesos. Con 1400, un producto de $35.000 se muestra como USD 25
 - `PORT`: puerto de la api (3000 por defecto)
+- `RABBITMQ_URL`: conexión al broker (opcional, sin ella la mensajería queda deshabilitada)
 
 Si falta `DATABASE_URL` o `PRECIO_USD` no es un número válido, la app no arranca: preferí cortar en el boot antes que servir precios rotos.
 
